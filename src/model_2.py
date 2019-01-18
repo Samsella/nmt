@@ -114,14 +114,17 @@ class encoding_stage():
         return self.enc(self.pos(self.embed(Input)))
 
 class decoding_stage():
-    def __init__(self, maxLen, vocab_size, sins):
+    def __init__(self, maxLen, vocab_size, sins, train=1):
+        self.train = train
         self.maxLen = maxLen
         self.embed = KL.Embedding(vocab_size, 100, input_length=maxLen, name='Output_Embedding')
         self.timing = KL.Lambda(lambda x: x*sins,name='Timing_Encoding')
         self.mix = io_mixer()
         self.dec = decoder(vocab_size)
         self.reshape = KL.Reshape((maxLen,))
-        self.slice = KL.Lambda(lambda x, i: x[:,i:i+1])
+        self.i = 0
+        self.slice = KL.Lambda(lambda x: x[:,self.i:self.i+1])
+        self.stack = KL.Lambda(lambda x: KB.stack(x, axis=1))
         self.output = []
 
     def __call__(self, enc, Input):
@@ -129,9 +132,11 @@ class decoding_stage():
         #c = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
         mix = self.mix(enc, c)
         dec = self.dec(enc, mix)
-        print(dec.shape)
         out = self.reshape(dec)
-        output = KL.Lambda(lambda x: x[:,:1])(out)
+        if self.train:
+            return out
+        self.i = 1
+        output = self.slice(out)
         self.output.append(output)
 
         for i in range(1,self.maxLen):
@@ -140,9 +145,10 @@ class decoding_stage():
             mix = self.mix(enc, c)
             dec = self.dec(enc, mix)
             out = self.reshape(dec)
-            output = KL.Lambda(lambda x: x[:,i:i+1])(out)
+            self.i = i
+            output = self.slice(out)
             self.output.append(output)
-            result = KL.Lambda(lambda x: KB.stack(x, axis=1))(self.output)
+        result = self.stack(self.output)
 
         return KL.Lambda(lambda x: KB.squeeze(x, axis=2))(result)
 
@@ -167,16 +173,17 @@ class SliceNet():
 
     def compile(self, optimizer, loss):
         self.in1 = KL.Input(shape=(self.maxLen,), name='Input')
-        #self.in2 = KL.Input(shape=(self.maxLen,), name='Output')
+        self.in2 = KL.Input(shape=(self.maxLen,), name='Output')
         enc = self.encoding(self.in1)
-        out = self.decoding(enc, self.in1)
-        self.model = K.models.Model(self.in1, out)
+        out = self.decoding(enc, self.in2)
+        self.model = K.models.Model([self.in1,self.in2], out)
         self.model.compile(optimizer=optimizer, loss=loss, metrics=['acc'])
         print('Model comiled')
         #self.model.summary()
 
 #sn = SliceNet()
 #sn.compile('Adam', 'binary_crossentropy')
+#sn.model.summary()
 #sn.model.save('SliceNet.h5')
 #model_json = sn.model.to_json()
 #with open("model.json", "w") as json_file:

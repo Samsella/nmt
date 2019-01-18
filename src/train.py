@@ -16,10 +16,10 @@ def train():
         model = load_model('SliceNet.h5')
     else:
         sn = SliceNet()
-        sn.compile('Adam', 'binary_crossentropy')
+        sn.compile('Adam', 'categorical_crossentropy')
         model = sn.model
         model.save('SliceNet.h5')
     #model.compile('adam', 'binary_crossentropy')
-    model.fit(train_X, train_y, 64, 1, 1, validation_data=(test_X, test_y))
+    model.fit(x=[train_X, train_y], y=train_y, batch_size=512, epochs=100, verbose=2)
 
 train()
