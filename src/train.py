@@ -6,7 +6,7 @@ from model_2 import SliceNet
 from keras.models import load_model
 from sklearn.model_selection import train_test_split
 import os
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def train():
     data_X, data_y = data().get_data()
