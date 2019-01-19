@@ -10,6 +10,9 @@ KL = K.layers
 KB = K.backend
 
 class conv_step():
+    ''' One step of Seperable Convolution and Normalization
+        with padding for the autoregressive mode
+    '''
     def __init__(self, filters, length, pad='same', dil=1 ,name=''):
         self.pad = pad
         self.padding = KL.ZeroPadding1D(padding=(length-1,0))
@@ -25,6 +28,9 @@ class conv_step():
 
 
 class conv_block():
+    ''' One Convolution block consisting of 4 conv_steps with residual
+        connections
+    '''
     def __init__(self, name, train, pad='same', depth=100):
         self.conv1   = conv_step(depth, 3, pad=pad, name=name+'_1')
         self.conv2   = conv_step(100, 3, pad='same', name=name+'_2')
@@ -43,6 +49,8 @@ class conv_block():
         return out
 
 class attend():
+    ''' Attention block
+    '''
     def __init__(self, name, pad='same', depth=100):
         self.coeff = KL.Lambda(lambda x: x * 1/np.sqrt(depth), name=name+'_Coeff')
         self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
@@ -60,6 +68,8 @@ class attend():
         return out
 
 class encoder():
+    ''' Encoder consisting of 6 convolution blocks
+    '''
     def __init__(self, train):
         self.c1 = conv_block('ENCODER_1', train=train)
         self.c2 = conv_block('ENCODER_2', train=train)
@@ -72,6 +82,8 @@ class encoder():
         return self.c6(self.c5(self.c4(self.c3(self.c2(self.c1(x))))))
 
 class io_mixer():
+    ''' Mixer block with encoded Input and Output of the model
+    '''
     def __init__(self):
         self.att    = attend('IO_MIX_attention')
         self.concat = KL.Concatenate(name='IO_MIX_concat')
@@ -81,6 +93,8 @@ class io_mixer():
         return self.conv(self.concat([self.att(x, y), y]))
 
 class decoder():
+    ''' Decoder getting input from the Encoder and the output of the mixer
+    '''
     def __init__(self, vocab_size):
         self.conv1 = conv_block('DECODER_conv1', 1, pad='valid')
         self.att1  = attend('DECODER_att_1', pad='valid')
@@ -105,6 +119,8 @@ class decoder():
         return x
 
 class encoding_stage():
+    ''' This is the whole Encoder with Embedding and positional encoding
+    '''
     def __init__(self, maxLen, vocab_size, sins, train):
         self.embed = KL.Embedding(vocab_size, 100, input_length=maxLen, name='Input_Embedding')
         self.pos = KL.Lambda(lambda x: x*sins,name='Positional_Encoding')
@@ -114,6 +130,8 @@ class encoding_stage():
         return self.enc(self.pos(self.embed(Input)))
 
 class decoding_stage():
+    ''' This is the whole decoder with Embedding and timing
+    '''
     def __init__(self, maxLen, vocab_size, sins, train=1):
         self.train = train
         self.maxLen = maxLen
@@ -184,33 +202,3 @@ class SliceNet():
 #sn = SliceNet()
 #sn.compile('Adam', 'binary_crossentropy')
 #sn.model.summary()
-#sn.model.save('SliceNet.h5')
-#model_json = sn.model.to_json()
-#with open("model.json", "w") as json_file:
-#    json_file.write(model_json)
-#K.utils.plot_model(sn.model, to_file='model.png')
-
-#import os
-#os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin'
-
-#from keras.utils import plot_model
-#plot_model(sn, to_file='model.png', dpi=600)
-
-'''
-dec_outputs = []
-
-        decodings = self.o_word_emb(dec_inputs)
-        # this splits the full input tensor into individual time steps that each step may be individually processed
-        decodings = Lambda(lambda x: tf.unstack(x, num=self.max_dec_seq_len, axis=1))(decodings)
-        for decoding in decodings:
-            decoding = self.embedding_reshaper(decoding)
-            context, _ = self.attention(encoding, decoding, h)
-            decoding, h, c = self.decoder1(context, initial_state=[h, c])
-            decoding = self.decoder_reshaper(decoding)
-            decoding, h, c = self.decoder2(decoding, initial_state=[h, c])
-            logits = self.output_layer(decoding)
-
-            dec_outputs.append(logits)
-
-        dec_outputs = Lambda(lambda x: K.stack(x, axis=1))(dec_outputs)
-'''
