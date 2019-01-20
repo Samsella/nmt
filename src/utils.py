@@ -59,8 +59,8 @@ class data():
             en = []
             for line in f:
                 d,e = line.strip('\n').split('\t')
-                de.append(d)
-                en.append(e)
+                en.append(d)
+                de.append('<s>'+e+'</s>')
             arr_de, arr_en = self.encode(spm, de, en, 50)
         return arr_de, arr_en
 

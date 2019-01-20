@@ -115,7 +115,6 @@ class decoder():
         x = self.add([self.conv4(x), self.att4(enc, x)])
         x = self.logit(x)
         x = self.argmax(x)
-        print(x.shape)
         return x
 
 class encoding_stage():
@@ -135,15 +134,17 @@ class decoding_stage():
     def __init__(self, maxLen, vocab_size, sins, train=1):
         self.train = train
         self.maxLen = maxLen
-        self.embed = KL.Embedding(vocab_size, 100, input_length=maxLen, name='Output_Embedding')
+        self.embed = KL.Embedding(vocab_size, 100, name='Output_Embedding')
         self.timing = KL.Lambda(lambda x: x*sins,name='Timing_Encoding')
         self.mix = io_mixer()
         self.dec = decoder(vocab_size)
         self.reshape = KL.Reshape((maxLen,))
-        self.i = 0
-        self.slice = KL.Lambda(lambda x: x[:,self.i:self.i+1])
-        self.stack = KL.Lambda(lambda x: KB.stack(x, axis=1))
-        self.output = []
+        #self.embed_reshape = KL.Reshape((100,))
+        #self.unstack = KL.Lambda(lambda x: tf.unstack(x, num=maxLen, axis=1))
+        #self.i = 0
+        #self.slice = KL.Lambda(lambda x: x[:,self.i:self.i+1])
+        #self.stack = KL.Lambda(lambda x: KB.stack(x, axis=1))
+        #self.output = []
 
     def __call__(self, enc, Input):
         c = self.timing(self.embed(Input))
@@ -153,12 +154,15 @@ class decoding_stage():
         out = self.reshape(dec)
         if self.train:
             return out
+
         self.i = 1
         output = self.slice(out)
         self.output.append(output)
+        out = self.unstack(out)
 
         for i in range(1,self.maxLen):
-            c = self.timing(self.embed(out))
+            c = self.timing(self.embed(out[i]))
+            c = self.embed_reshape(c)
             #c = KL.Lambda(lambda x: KB.concatenate([x[:,:i], x[:,i:]*0], axis=1))(c)
             mix = self.mix(enc, c)
             dec = self.dec(enc, mix)
@@ -185,7 +189,7 @@ class SliceNet():
             for d in range(100)]).T
 
         self.encoding = encoding_stage(self.maxLen, self.vocab_size, self.sins, train=1)
-        self.decoding = decoding_stage(self.maxLen, self.vocab_size, self.sins)
+        self.decoding = decoding_stage(self.maxLen, self.vocab_size, self.sins, train=0)
         print('Model created')
 
 
@@ -199,6 +203,6 @@ class SliceNet():
         print('Model comiled')
         #self.model.summary()
 
-#sn = SliceNet()
-#sn.compile('Adam', 'binary_crossentropy')
+sn = SliceNet()
+sn.compile('Adam', 'binary_crossentropy')
 #sn.model.summary()
