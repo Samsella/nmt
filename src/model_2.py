@@ -106,7 +106,7 @@ class decoder():
         self.att4  = attend('DECODER_att_4', pad='valid')
         self.add   = KL.Add(name='DECODER_add')
         self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_OUT')
-        self.argmax = KL.GlobalMaxPooling1D(data_format='channels_first')
+        self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
     def __call__(self, enc, x):
         x = self.add([self.conv1(x), self.att1(enc, x)])
