@@ -199,7 +199,7 @@ class SliceNet():
         enc = self.encoding(self.in1)
         log, out = self.decoding(enc, self.in2)
         self.model = K.models.Model([self.in1,self.in2], log)
-        self.model.compile(optimizer=optimizer, loss=loss, metrics=['sparse_categorical_crossentropy'])
+        self.model.compile(optimizer=optimizer, loss=loss, metrics=['sparse_categorical_accuracy'])
         print('Model comiled')
         #self.model.summary()
 
