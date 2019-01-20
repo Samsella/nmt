@@ -105,7 +105,7 @@ class decoder():
         self.conv4 = conv_block('DECODER_conv4', True, pad='valid')
         self.att4  = attend('DECODER_att_4', pad='valid')
         self.add   = KL.Add(name='DECODER_add')
-        self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_OUT')
+        self.logit = KL.Dense(vocab_size, activation='linear', name='DECODER_OUT')
         self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
     def __call__(self, enc, x):
@@ -198,9 +198,8 @@ class SliceNet():
         self.in2 = KL.Input(shape=(self.maxLen,), name='Output')
         enc = self.encoding(self.in1)
         log, out = self.decoding(enc, self.in2)
-        print(log.shape, out.shape)
-        self.model = K.models.Model([self.in1,self.in2], out)
-        self.model.compile(optimizer=optimizer, loss=loss, metrics=['categorical_accuracy'])
+        self.model = K.models.Model([self.in1,self.in2], log)
+        self.model.compile(optimizer=optimizer, loss=loss, metrics=['sparse_categorical_crossentropy'])
         print('Model comiled')
         #self.model.summary()
 
