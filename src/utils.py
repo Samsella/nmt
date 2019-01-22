@@ -11,10 +11,20 @@ warnings.simplefilter('ignore')
 import matplotlib.pyplot as plt
 
 class data():
-    def __init__(self):
-        self.spm = self.sp('../data/deu.txt', 4000)
+    def __init__(self, path='../data/deu.txt', size=4000):
+        self.path = self.create_path(path)
+        #self.spm = self.sp(size)
 
-    def sp(self, path2data, size):
+    def create_path(self, path):
+        if type(path) == list:
+            newpath = path[0]+'_extended.txt'
+            with open(newpath, 'wb') as f:
+                for path in path:
+                    f.write(open(path, 'rb').read())
+            path=newpath
+        return path
+
+    def sp(self, size):
         name = 'spm_{size}_{type}'.format(size=size, type='unigram')
         path2file = name + '.model'
         if not os.path.exists(path2file):
@@ -22,17 +32,17 @@ class data():
                 --input={input} \
                 --model_prefix={name} \
                 --vocab_size={size}'.format(
-                    input=path2data,
+                    input=self.path,
                     name=name,
                     size=size))
         spm = spp()
         spm.load(path2file)
         return spm
 
-    def encode(self, spm, src, tgt, maxLen):
+    def encode(self, src, tgt, maxLen):
         # encode sentences
-        s = list(map(spm.EncodeAsIds, src))
-        t = list(map(spm.EncodeAsIds, tgt))
+        s = list(map(self.spm.EncodeAsIds, src))
+        t = list(map(self.spm.EncodeAsIds, tgt))
         src, tgt = [], []
         # remove sentences longer than maxLen
         for s1, s2 in zip(s,t):
@@ -49,21 +59,21 @@ class data():
             arr_tgt[idx, :len(sent2)] = sent2
         return arr_src, arr_tgt
 
-    def decode(self, spm, arr):
-        sents = [spm.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
+    def decode(self, arr):
+        sents = [self.spm.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
         return sents
 
-    def create_data(self, spm):
-        with open('../data/deu.txt', 'r', encoding='utf8') as f:
+    def create_data(self):
+        with open(self.path, 'r', encoding='utf8') as f:
             de = []
             en = []
             for line in f:
                 d,e = line.strip('\n').split('\t')
                 en.append(d)
                 de.append('<s>'+e+'</s>')
-            arr_de, arr_en = self.encode(spm, de, en, 50)
+            arr_de, arr_en = self.encode( de, en, 50)
         return arr_de, arr_en
 
     def get_data(self):
-        a, b = self.create_data(self.spm)
+        a, b = self.create_data()
         return a, b
