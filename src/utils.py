@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 
 class data():
     def __init__(self, path='../data/deu.txt', size=4000):
+        self.paths = path
         self.path = self.create_path(path)
-        #self.spm = self.sp(size)
+        self.spm = self.sp(size)
 
     def create_path(self, path):
         if type(path) == list:
@@ -25,7 +26,7 @@ class data():
         return path
 
     def sp(self, size):
-        name = 'spm_{size}_{type}'.format(size=size, type='unigram')
+        name = 'spm_{size}_{type}_{data}'.format(size=size, type='unigram', data='europarl')
         path2file = name + '.model'
         if not os.path.exists(path2file):
             spt.train('\
@@ -64,14 +65,18 @@ class data():
         return sents
 
     def create_data(self):
-        with open(self.path, 'r', encoding='utf8') as f:
-            de = []
-            en = []
-            for line in f:
-                d,e = line.strip('\n').split('\t')
-                en.append(d)
-                de.append('<s>'+e+'</s>')
-            arr_de, arr_en = self.encode( de, en, 50)
+        if type(self.paths) == list:
+            de = [line for line in open(self.paths[0], encoding='utf8')]
+            en = ['<s>'+line+'</s>' for line in open(self.paths[1], encoding='utf8')]
+        else:
+            with open(self.path, 'r', encoding='utf8') as f:
+                de = []
+                en = []
+                for line in f:
+                    d,e = line.strip('\n').split('\t')
+                    en.append(d)
+                    de.append('<s>'+e+'</s>')
+        arr_de, arr_en = self.encode(de, en, 50)
         return arr_de, arr_en
 
     def get_data(self):

@@ -14,7 +14,8 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def train():
-    path2data = '../../../../data/de-en/'
+    #path2data = '../../../../data/de-en/'
+    path2data = '../data/de-en/'
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
     data_X, data_y = data(files).get_data()
