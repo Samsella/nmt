@@ -14,7 +14,8 @@ class data():
     def __init__(self, path='../data/deu.txt', size=4000):
         self.paths = path
         self.path = self.create_path(path)
-        self.spm = self.sp(size)
+        self.spm_de = self.sp(size, 'de', path[0])
+        self.spm_en = self.sp(size, 'en', path[1])
 
     def create_path(self, path):
         if type(path) == list:
@@ -25,15 +26,16 @@ class data():
             path=newpath
         return path
 
-    def sp(self, size):
-        name = 'spm_{size}_{type}_{data}'.format(size=size, type='unigram', data='europarl')
+    def sp(self, size, lang, path):
+        name = 'spm_{size}_{type}_{data}_{lang}'.format(
+            size=size, type='unigram', data='europarl', lang=lang)
         path2file = name + '.model'
         if not os.path.exists(path2file):
             spt.train('\
                 --input={input} \
                 --model_prefix={name} \
                 --vocab_size={size}'.format(
-                    input=self.path,
+                    input=path,
                     name=name,
                     size=size))
         spm = spp()
@@ -42,8 +44,8 @@ class data():
 
     def encode(self, src, tgt, maxLen):
         # encode sentences
-        s = list(map(self.spm.EncodeAsIds, src))
-        t = list(map(self.spm.EncodeAsIds, tgt))
+        s = list(map(self.spm_en.EncodeAsIds, src))
+        t = list(map(self.spm_de.EncodeAsIds, tgt))
         src, tgt = [], []
         # remove sentences longer than maxLen
         for s1, s2 in zip(s,t):
@@ -76,7 +78,7 @@ class data():
                     d,e = line.strip('\n').split('\t')
                     en.append(d)
                     de.append('<s>'+e+'</s>')
-        arr_de, arr_en = self.encode(de, en, 50)
+        arr_en, arr_de = self.encode(en, de, 50)
         return arr_de, arr_en
 
     def get_data(self):
