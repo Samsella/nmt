@@ -62,25 +62,40 @@ class data():
             arr_tgt[idx, :len(sent2)] = sent2
         return arr_src, arr_tgt
 
-    def decode(self, arr):
-        sents = [self.spm.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
+    def decode(self, arr, lang):
+        if lang == 'de':
+            sents = [self.spm_de.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
+        if lang == 'en':
+            sents = [self.spm_en.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
+
         return sents
 
     def create_data(self):
         if type(self.paths) == list:
-            de = [line for line in open(self.paths[0], encoding='utf8')]
-            en = ['<s>'+line+'</s>' for line in open(self.paths[1], encoding='utf8')]
+            en = [line for line in open(self.paths[1], encoding='utf8')]
+            de = ['<s> '+line+' </s>' for line in open(self.paths[0], encoding='utf8')]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
-                de = []
                 en = []
+                de = []
                 for line in f:
                     d,e = line.strip('\n').split('\t')
                     en.append(d)
                     de.append('<s>'+e+'</s>')
-        arr_en, arr_de = self.encode(en, de, 50)
-        return arr_de, arr_en
+        arr_en, arr_de = self.encode(en, de, 40)
+        return arr_en, arr_de
 
     def get_data(self):
         a, b = self.create_data()
         return a, b
+
+
+#path2data = '../data/de-en/'
+#files = [path2data+'europarl-v7.de-en.de',
+#         path2data+'europarl-v7.de-en.en']
+#d = data(files, size=8000)
+#a, b = d.get_data()
+#c = d.decode(b[5000:5002], 'en')
+#print(c)
+#c = d.decode(b[5000:5002], 'de')
+#print(c)

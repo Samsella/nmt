@@ -18,9 +18,12 @@ def train():
     path2data = '../data/de-en/'
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
-    data_X, data_y = data(files).get_data()
-    train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.01, random_state=13)
+    d = data(files, size=4000)
+    data_X, data_y = d.get_data()
+    train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.01, random_state=18)
     train_X2 = train_y
+    print(d.decode(train_X[150:151], 'en'))
+    print(d.decode(train_y[150:151], 'de'))
 
     def sl(y_true, y_pred):
         ''' wrap for sparse_categorical_crossentropy to bypass the adding
@@ -30,7 +33,7 @@ def train():
 
     callback_checkpoint = ModelCheckpoint(filepath='chpt.keras',
                                       monitor='val_loss',
-                                      verbose=1,
+                                      verbose=2,
                                       save_weights_only=True,
                                       save_best_only=True)
 
@@ -42,18 +45,22 @@ def train():
                                    histogram_freq=0,
                                    write_graph=True)
 
-    callbacks = [callback_checkpoint, callback_early_stopping,
+    callbacks = [callback_checkpoint,
                  callback_tensorboard]
 
     if os.path.exists('SliceNet.h5') and 0:
         model = load_model('SliceNet.h5')
     else:
-        sn = SliceNet()
+        sn = SliceNet(vocab_size=4000)
         sn.compile('Adam', sl)
         model = sn.model
         #model.summary()
         model.save('SliceNet.h5')
     model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=200,
               verbose=2, validation_split=0.01, callbacks=callbacks)
+
+    #print(d.decode(train_X[0], 'en'))
+    #print('\n\n')
+    #print(d.decode(train_y[0], 'de'))
 
 train()
