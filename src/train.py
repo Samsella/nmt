@@ -19,6 +19,10 @@ def train():
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
     d = data(files, size=4000)
+    start = d.spm_en.EncodeAsIds('<s>')
+    end = d.spm_en.EncodeAsIds('</s>')
+    print(start, end)
+
     data_X, data_y = d.get_data()
     train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.01, random_state=18)
     train_X2 = train_y
@@ -33,7 +37,7 @@ def train():
 
     callback_checkpoint = ModelCheckpoint(filepath='chpt.keras',
                                       monitor='val_loss',
-                                      verbose=2,
+                                      verbose=0,
                                       save_weights_only=True,
                                       save_best_only=True)
 
@@ -56,8 +60,13 @@ def train():
         model = sn.model
         #model.summary()
         model.save('SliceNet.h5')
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=200,
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=1,
               verbose=2, validation_split=0.01, callbacks=callbacks)
+
+
+    p = model.predict(test_X[200], start, end)
+    print(test_X[200])
+    print(p)
 
     #print(d.decode(train_X[0], 'en'))
     #print('\n\n')

@@ -16,6 +16,7 @@ class data():
         self.path = self.create_path(path)
         self.spm_de = self.sp(size, 'de', path[0])
         self.spm_en = self.sp(size, 'en', path[1])
+        self.spm_en.SetEncodeExtraOptions('bos:eos')
 
     def create_path(self, path):
         if type(path) == list:
@@ -35,7 +36,7 @@ class data():
                 --input={input} \
                 --model_prefix={name} \
                 --vocab_size={size}'.format(
-                    input=path,
+                    input=self.path,
                     name=name,
                     size=size))
         spm = spp()
@@ -73,7 +74,7 @@ class data():
     def create_data(self):
         if type(self.paths) == list:
             en = [line for line in open(self.paths[1], encoding='utf8')]
-            de = ['<s> '+line+' </s>' for line in open(self.paths[0], encoding='utf8')]
+            de = [line for line in open(self.paths[0], encoding='utf8')]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
                 en = []
@@ -81,7 +82,7 @@ class data():
                 for line in f:
                     d,e = line.strip('\n').split('\t')
                     en.append(d)
-                    de.append('<s>'+e+'</s>')
+                    de.append(e)
         arr_en, arr_de = self.encode(en, de, 40)
         return arr_en, arr_de
 
