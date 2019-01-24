@@ -71,10 +71,13 @@ class data():
 
         return sents
 
-    def create_data(self):
+    def create_data(self, test):
         if type(self.paths) == list:
             en = [line for line in open(self.paths[1], encoding='utf8')]
             de = [line for line in open(self.paths[0], encoding='utf8')]
+            if test:
+                en = en[:10]
+                de = de[:10]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
                 en = []
@@ -86,8 +89,8 @@ class data():
         arr_en, arr_de = self.encode(en, de, 40)
         return arr_en, arr_de
 
-    def get_data(self):
-        a, b = self.create_data()
+    def get_data(self, test=0):
+        a, b = self.create_data(test)
         return a, b
 
 

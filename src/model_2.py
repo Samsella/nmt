@@ -41,10 +41,10 @@ class conv_block():
             self.add2    = KL.Add(name=name+'_Add_2')
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
-    def __call__(self, x):
+    def __call__(self, x, train):
         y   = self.add1([x, self.conv2(self.conv1(x))])
         out = self.add2([x, self.conv4(self.conv3(x))])
-        if self.train:
+        if train:
             out = self.dropout(out)
         return out
 
@@ -80,8 +80,8 @@ class encoder():
             self.c5 = conv_block('ENCODER_5')
             self.c6 = conv_block('ENCODER_6')
 
-    def __call__(self, x):
-        return self.c6(self.c5(self.c4(self.c3(self.c2(self.c1(x))))))
+    def __call__(self, x, train):
+        return self.c6(self.c5(self.c4(self.c3(self.c2(self.c1(x, train=train), train=train), train=train), train=train), train=train), train=train)
 
 class io_mixer():
     ''' Mixer block with encoded Input and Output of the model
@@ -99,24 +99,24 @@ class decoder():
     ''' Decoder getting input from the Encoder and the output of the mixer
     '''
     def __init__(self, vocab_size):
-        with sope('decoder'):
-            self.conv1 = conv_block('DECODER_conv1', True, pad='valid')
+        with scope('decoder'):
+            self.conv1 = conv_block('DECODER_conv1', pad='valid')
             self.att1  = attend('DECODER_att_1', pad='valid')
-            self.conv2 = conv_block('DECODER_conv2', True, pad='valid')
+            self.conv2 = conv_block('DECODER_conv2', pad='valid')
             self.att2  = attend('DECODER_att_2', pad='valid')
-            self.conv3 = conv_block('DECODER_conv3', True, pad='valid')
+            self.conv3 = conv_block('DECODER_conv3', pad='valid')
             self.att3  = attend('DECODER_att_3', pad='valid')
-            self.conv4 = conv_block('DECODER_conv4', True, pad='valid')
+            self.conv4 = conv_block('DECODER_conv4', pad='valid')
             self.att4  = attend('DECODER_att_4', pad='valid')
             self.add   = KL.Add(name='DECODER_add')
             self.logit = KL.Dense(vocab_size, activation='linear', name='DECODER_OUT')
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
-    def __call__(self, enc, x):
-        x = self.add([self.conv1(x), self.att1(enc, x)])
-        x = self.add([self.conv2(x), self.att2(enc, x)])
-        x = self.add([self.conv3(x), self.att3(enc, x)])
-        x = self.add([self.conv4(x), self.att4(enc, x)])
+    def __call__(self, enc, x, train):
+        x = self.add([self.conv1(x, train=train), self.att1(enc, x)])
+        x = self.add([self.conv2(x, train=train), self.att2(enc, x)])
+        x = self.add([self.conv3(x, train=train), self.att3(enc, x)])
+        x = self.add([self.conv4(x, train=train), self.att4(enc, x)])
         x = self.logit(x)
         y = self.argmax(x)
         return x, y
@@ -130,8 +130,8 @@ class encoding_stage():
             self.pos   = KL.Lambda(lambda x: x*sins,name='Positional_Encoding')
             self.enc   = encoder()
 
-    def __call__(self, Input):
-        return self.enc(self.pos(self.embed(Input)))
+    def __call__(self, Input, train=1):
+        return self.enc(self.pos(self.embed(Input)), train=train)
 
 class decoding_stage():
     ''' This is the whole decoder with Embedding and timing
@@ -151,11 +151,11 @@ class decoding_stage():
             #self.stack = KL.Lambda(lambda x: KB.stack(x, axis=1))
             #self.output = []
 
-    def __call__(self, enc, Input):
+    def __call__(self, enc, Input, train):
         c        = self.timing(self.embed(Input))
         #c       = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
         mix      = self.mix(enc, c)
-        log, dec = self.dec(enc, mix)
+        log, dec = self.dec(enc, mix, train=train)
         out      = self.reshape(dec)
         #if self.train:
         return log, out
@@ -202,8 +202,8 @@ class SliceNet():
     def compile(self, optimizer, loss):
         self.in1   = KL.Input(shape=(self.maxLen,), name='Input')
         self.in2   = KL.Input(shape=(self.maxLen,), name='Output')
-        enc        = self.encoding(self.in1)
-        log, out   = self.decoding(enc, self.in2)
+        enc        = self.encoding(self.in1, self.train)
+        log, out   = self.decoding(enc, self.in2, self.train)
         self.model = K.models.Model([self.in1,self.in2], log)
         self.model.compile(optimizer=optimizer, loss=loss, metrics=['sparse_categorical_accuracy'])
         print('Model comiled')
