@@ -35,7 +35,8 @@ class data():
             spt.train('\
                 --input={input} \
                 --model_prefix={name} \
-                --vocab_size={size}'.format(
+                --vocab_size={size} \
+                --unk_id=3'.format(
                     input=self.path,
                     name=name,
                     size=size))
@@ -76,8 +77,8 @@ class data():
             en = [line for line in open(self.paths[1], encoding='utf8')]
             de = [line for line in open(self.paths[0], encoding='utf8')]
             if test:
-                en = en[:10]
-                de = de[:10]
+                en = en[:5000]
+                de = de[:5000]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
                 en = []
@@ -91,7 +92,7 @@ class data():
 
     def get_data(self, test=0):
         a, b = self.create_data(test)
-        return a, b
+        return a.astype(int), b.astype(int)
 
 
 #path2data = '../data/de-en/'
