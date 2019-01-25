@@ -21,12 +21,13 @@ def train():
     d = data(files, size=4000)
     start = d.spm_en.EncodeAsIds('<s>')
     end = d.spm_en.EncodeAsIds('</s>')
-    print(start, end)
 
-    data_X, data_y = d.get_data()
+    data_X, data_y = d.get_data(test=1)
     train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.01, random_state=18)
     train_X2 = train_y
+    print(train_X[150:151])
     print(d.decode(train_X[150:151], 'en'))
+    print(train_y[150:151])
     print(d.decode(train_y[150:151], 'de'))
 
     def sl(y_true, y_pred):
@@ -60,13 +61,13 @@ def train():
         model = sn.model
         #model.summary()
         model.save('SliceNet.h5')
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=1,
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=100,
               verbose=2, validation_split=0.01, callbacks=callbacks)
 
 
-    p = model.predict(test_X[200], start, end)
-    print(test_X[200])
-    print(p)
+    #p = model.predict(test_X[2], start, end)
+    #print(test_X[2])
+    #print(d.decode(np.array(p), 'de'))
 
     #print(d.decode(train_X[0], 'en'))
     #print('\n\n')
