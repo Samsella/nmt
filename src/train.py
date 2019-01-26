@@ -23,7 +23,7 @@ def train():
     end = d.spm_en.EncodeAsIds('</s>')
 
     data_X, data_y = d.get_data(test=1)
-    train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.01, random_state=18)
+    train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.002, random_state=18)
     train_X2 = train_y
     print(train_X[150:151])
     print(d.decode(train_X[150:151], 'en'))
@@ -61,12 +61,13 @@ def train():
         model = sn.model
         #model.summary()
         model.save('SliceNet.h5')
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=32, epochs=100,
-              verbose=2, validation_split=0.01, callbacks=callbacks)
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=20,
+              verbose=2, validation_split=0.002, callbacks=callbacks)
 
-
-    p = model.predict(test_X[2], start, end)
-    print(test_X[2])
+    print(test_y[:1])
+    print(d.decode(np.array(test_y[:1]), 'de'))
+    p = sn.predict(test_X[:1], start, end)
+    print(p)
     print(d.decode(np.array(p), 'de'))
 
     #print(d.decode(train_X[0], 'en'))

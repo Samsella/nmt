@@ -16,7 +16,7 @@ class data():
         self.path = self.create_path(path)
         self.spm_de = self.sp(size, 'de', path[0])
         self.spm_en = self.sp(size, 'en', path[1])
-        self.spm_en.SetEncodeExtraOptions('bos:eos')
+        self.spm_de.SetEncodeExtraOptions('bos:eos')
 
     def create_path(self, path):
         if type(path) == list:

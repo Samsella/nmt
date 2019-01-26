@@ -210,26 +210,26 @@ class SliceNet():
         print('Model comiled')
         #self.model.summary()
 
-    def predict(self, src, start, end):
+    def predict(self, src, start=1, end=2):
         self.train = 0
-        #enc_output = self.encoding(src)
-        output = np.zeros((256, self.maxLen))
-        output[0] = start
-
+        batch_size = src.shape[0]
+        output = np.zeros((batch_size, self.maxLen), dtype=int)
+        output[:,0] = 1
         end_found = False
         prediction = []
         idx = 0
-        while not end_found:
-            _, dec_out = self.model.predict([src, output[idx]])
+        while True:
+            log = self.model.predict([src, output])
             # Predict the phoneme with the highest probability
+            dec_out = np.argmax(log, axis=2)
             #predicted_idx = np.argmax(decoder_output[0, :])
-            prediction.append(predicted_idx)
-            if predicted_idx == dec_end or len(prediction) > maxLen:
-                end_found = True
+            prediction.append(dec_out[:,idx])
+            if len(prediction) >= self.maxLen:
+                break
             # Setup inputs for next time step
-            output[idx+1] = predicted_idx
+            output[:, idx+1] = dec_out[:,idx]
             idx += 1
-        return prediction
+        return output
 
 #sn = SliceNet()
 #sn.compile('Adam', 'binary_crossentropy')
