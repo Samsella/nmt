@@ -36,7 +36,8 @@ class data():
                 --input={input} \
                 --model_prefix={name} \
                 --vocab_size={size} \
-                --unk_id=3'.format(
+                --unk_id=3 \
+                --pad_id=0'.format(
                     input=self.path,
                     name=name,
                     size=size))

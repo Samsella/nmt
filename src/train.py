@@ -14,8 +14,8 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def train():
-    path2data = '../../../../data/europarl/de-en/'
-    #path2data = '../data/de-en/'
+    #path2data = '../../../../data/europarl/de-en/'
+    path2data = '../data/de-en/'
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
     d = data(files, size=4000)
@@ -61,13 +61,13 @@ def train():
         model = sn.model
         #model.summary()
         model.save('SliceNet.h5')
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=256, epochs=100,
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=32, epochs=100,
               verbose=2, validation_split=0.01, callbacks=callbacks)
 
 
-    #p = model.predict(test_X[2], start, end)
-    #print(test_X[2])
-    #print(d.decode(np.array(p), 'de'))
+    p = model.predict(test_X[2], start, end)
+    print(test_X[2])
+    print(d.decode(np.array(p), 'de'))
 
     #print(d.decode(train_X[0], 'en'))
     #print('\n\n')

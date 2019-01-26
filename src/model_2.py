@@ -109,7 +109,8 @@ class decoder():
             self.conv4 = conv_block('DECODER_conv4', pad='valid')
             self.att4  = attend('DECODER_att_4', pad='valid')
             self.add   = KL.Add(name='DECODER_add')
-            self.logit = KL.Dense(vocab_size, activation='linear', name='DECODER_OUT')
+            self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
+            #self.logit = KL.Softmax(name='DECODER_OUT')
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
     def __call__(self, enc, x, train):
@@ -127,7 +128,7 @@ class encoding_stage():
     def __init__(self, maxLen, vocab_size, sins):
         with scope('encoding_stage'):
             self.embed = KL.Embedding(vocab_size, 100, input_length=maxLen, name='Input_Embedding')
-            self.pos   = KL.Lambda(lambda x: x*sins,name='Positional_Encoding')
+            self.pos   = KL.Lambda(lambda x: x+sins,name='Positional_Encoding')
             self.enc   = encoder()
 
     def __call__(self, Input, train=1):
@@ -140,7 +141,7 @@ class decoding_stage():
         with scope('decoding_stage'):
             self.maxLen  = maxLen
             self.embed   = KL.Embedding(vocab_size, 100, name='Output_Embedding')
-            self.timing  = KL.Lambda(lambda x: x*sins,name='Timing_Encoding')
+            self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
             self.mix     = io_mixer()
             self.dec     = decoder(vocab_size)
             self.reshape = KL.Reshape((maxLen,))
@@ -212,7 +213,7 @@ class SliceNet():
     def predict(self, src, start, end):
         self.train = 0
         #enc_output = self.encoding(src)
-        output = np.zeros((self.maxLen, 1))
+        output = np.zeros((256, self.maxLen))
         output[0] = start
 
         end_found = False
