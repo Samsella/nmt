@@ -53,15 +53,16 @@ def train():
     callbacks = [callback_checkpoint,
                  callback_tensorboard]
 
-    if os.path.exists('SliceNet.h5') and 0:
-        model = load_model('SliceNet.h5')
-    else:
-        sn = SliceNet(vocab_size=4000)
-        sn.compile('Adam', sl)
-        model = sn.model
-        #model.summary()
-        model.save('SliceNet.h5')
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=20,
+
+    sn = SliceNet(vocab_size=4000)
+    sn.compile('Adam', sl)
+    model = sn.model
+
+    if os.path.exists('chpt.keras'):
+        model.load_weights('chpt.keras')
+        print('Weights loaded')
+
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=10,
               verbose=2, validation_split=0.002, callbacks=callbacks)
 
     print(test_y[:1])
