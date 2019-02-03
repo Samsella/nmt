@@ -223,7 +223,7 @@ class SliceNet():
             dec_out = np.argmax(log, axis=2)
             output[:, idx+1] = dec_out[:,idx]
             idx += 1
-            if idx >= self.maxLen:
+            if idx >= self.maxLen-1:
                 break
         return output
 
