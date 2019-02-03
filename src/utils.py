@@ -14,9 +14,11 @@ class data():
     def __init__(self, path='../data/deu.txt', size=4000):
         self.paths = path
         self.path = self.create_path(path)
-        self.spm_de = self.sp(size, 'de', path[0])
+        self.spm_de_y = self.sp(size, 'de', path[0])
+        self.spm_de_l = self.sp(size, 'de', path[0])
         self.spm_en = self.sp(size, 'en', path[1])
-        self.spm_de.SetEncodeExtraOptions('bos:eos')
+        self.spm_de_y.SetEncodeExtraOptions('bos')
+        self.spm_de_l.SetEncodeExtraOptions('eos')
 
     def create_path(self, path):
         if type(path) == list:
@@ -48,26 +50,30 @@ class data():
     def encode(self, src, tgt, maxLen):
         # encode sentences
         s = list(map(self.spm_en.EncodeAsIds, src))
-        t = list(map(self.spm_de.EncodeAsIds, tgt))
-        src, tgt = [], []
+        y = list(map(self.spm_de_y.EncodeAsIds, tgt))
+        t = list(map(self.spm_de_l.EncodeAsIds, tgt))
+        src, yy, tgt = [], [], []
         # remove sentences longer than maxLen
-        for s1, s2 in zip(s,t):
-            if (max(len(s1), len(s2)) > maxLen):
+        for s1, s2, s3 in zip(s,y,t):
+            if (max(len(s1), len(s2)+1) > maxLen):
                 continue
             src.append(s1)
-            tgt.append(s2)
+            yy.append(s2)
+            tgt.append(s3)
         # create arrays
         arr_src = np.zeros((len(src), maxLen))
+        arr_l   = np.zeros((len(yy), maxLen))
         arr_tgt = np.zeros((len(tgt), maxLen))
         # fill arrays
-        for idx, (sent1, sent2) in enumerate(zip(src, tgt)):
+        for idx, (sent1, sent2, sent3) in enumerate(zip(src, yy, tgt)):
             arr_src[idx, :len(sent1)] = sent1
-            arr_tgt[idx, :len(sent2)] = sent2
-        return arr_src, arr_tgt
+            arr_l[idx, :len(sent2)]   = sent2
+            arr_tgt[idx, :len(sent2)] = sent3
+        return arr_src, arr_tgt, arr_l
 
     def decode(self, arr, lang):
         if lang == 'de':
-            sents = [self.spm_de.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
+            sents = [self.spm_de_y.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
         if lang == 'en':
             sents = [self.spm_en.DecodeIds(list(map(int, arr[i,np.nonzero(arr[i,:])[0]]))) for i in range(len(arr))]
 
@@ -88,12 +94,14 @@ class data():
                     d,e = line.strip('\n').split('\t')
                     en.append(d)
                     de.append(e)
-        arr_en, arr_de = self.encode(en, de, 40)
-        return arr_en, arr_de
+        arr_en, arr_de, arr_l = self.encode(en, de, 40)
+        return arr_en, arr_de, arr_l
 
     def get_data(self, test=0):
-        a, b = self.create_data(test)
-        return a.astype(int), b.astype(int)
+        a, b, c = self.create_data(test)
+        b1 = np.concatenate([b[:,:-1], np.zeros(b[:,:1].shape)], axis=1)
+        b2 = np.concatenate([b[:,1:], np.zeros(b[:,:1].shape)], axis=1)
+        return a.astype(int), b.astype(int), c.astype(int)
 
 
 #path2data = '../data/de-en/'

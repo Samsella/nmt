@@ -22,13 +22,15 @@ def train():
     start = d.spm_en.EncodeAsIds('<s>')
     end = d.spm_en.EncodeAsIds('</s>')
 
-    data_X, data_y = d.get_data(test=1)
-    train_X, test_X, train_y, test_y = train_test_split(data_X, data_y, test_size=0.002, random_state=18)
-    train_X2 = train_y
+    data_X, data_y, labels = d.get_data(test=1)
+    train_X, test_X, train_y, test_y, train_labels, test_labels= train_test_split(data_X, data_y, labels, test_size=0.002, random_state=18)
     print(train_X[150:151])
     print(d.decode(train_X[150:151], 'en'))
     print(train_y[150:151])
     print(d.decode(train_y[150:151], 'de'))
+    print(train_labels[150:151])
+    print(d.decode(train_labels[150:151], 'de'))
+
 
     def sl(y_true, y_pred):
         ''' wrap for sparse_categorical_crossentropy to bypass the adding
@@ -62,7 +64,7 @@ def train():
         model.load_weights('chpt.keras')
         print('Weights loaded')
 
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=0,
+    model.fit(x=[data_X, data_y], y=labels, batch_size=64, epochs=10,
               verbose=2, validation_split=0.002, callbacks=callbacks)
 
     print(test_y[:1])

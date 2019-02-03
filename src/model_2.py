@@ -59,7 +59,7 @@ class attend():
             self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
             self.dot1  = KL.Dot(axes=(2,1), name=name+'_Dot_1')
             self.softm = KL.Softmax(name=name+'_Softmax')
-            self.dot2  = KL.Dot(axes=1, name=name+'_Dot_2')
+            self.dot2  = KL.Dot(axes=(2,1), name=name+'_Dot_2')
 
     def __call__(self, x, y):
         c   = self.coeff(x)
