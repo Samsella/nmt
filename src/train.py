@@ -19,11 +19,14 @@ def train():
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
     d = data(files, size=4000)
-    start = d.spm_en.EncodeAsIds('<s>')
-    end = d.spm_en.EncodeAsIds('</s>')
 
-    data_X, data_y, labels = d.get_data(test=1)
-    train_X, test_X, train_y, test_y, train_labels, test_labels= train_test_split(data_X, data_y, labels, test_size=0.002, random_state=18)
+    if not os.path.exists('data.npz'):
+        data_X, data_y, labels = d.get_data(test=1)
+        np.savez_compressed('data', a=data_X, b=data_y, c=labels)
+    else:
+        data_X, data_y, labels = [arr for key, arr in np.load('data.npz').items()]
+
+    train_X, test_X, train_y, test_y, train_labels, test_labels= train_test_split(data_X, data_y, labels, test_size=0.002, random_state=13)
     print(train_X[150:151])
     print(d.decode(train_X[150:151], 'en'))
     print(train_y[150:151])
@@ -50,7 +53,8 @@ def train():
 
     callback_tensorboard = TensorBoard(log_dir='./21_logs/',
                                    histogram_freq=0,
-                                   write_graph=True)
+                                   write_graph=True,
+                                   update_freq=10000)
 
     callbacks = [callback_checkpoint,
                  callback_tensorboard]
@@ -64,12 +68,12 @@ def train():
         model.load_weights('chpt.keras')
         print('Weights loaded')
 
-    model.fit(x=[data_X, data_y], y=labels, batch_size=64, epochs=10,
+    model.fit(x=[train_X, train_y], y=train_labels, batch_size=64, epochs=10,
               verbose=2, validation_split=0.002, callbacks=callbacks)
 
     print(test_y[:1])
     print(d.decode(np.array(test_y[:1]), 'de'))
-    p = sn.predict(test_X[:1], start, end)
+    p = sn.predict(test_X[:1])
     print(p)
     print(d.decode(np.array(p), 'de'))
 
