@@ -22,9 +22,10 @@ class conv_step():
             self.norm    = LayerNormalization(name=name+'_Norm')
 
     def __call__(self, x):
-        if self.pad != 'same':
-            x = self.padding(x)
-        return self.norm(self.conv(self.act(x)))
+        with scope('conv_step_op'):
+            if self.pad != 'same':
+                x = self.padding(x)
+            return self.norm(self.conv(self.act(x)))
 
 
 class conv_block():
@@ -42,11 +43,12 @@ class conv_block():
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
     def __call__(self, x, train):
-        y   = self.add1([x, self.conv2(self.conv1(x))])
-        out = self.add2([x, self.conv4(self.conv3(x))])
-        if train:
-            out = self.dropout(out)
-        return out
+        with scope('conv_block'):
+            y   = self.add1([x, self.conv2(self.conv1(x))])
+            out = self.add2([x, self.conv4(self.conv3(y))])
+            if train:
+                out = self.dropout(out)
+            return out
 
 class attend():
     ''' Attention block
@@ -56,17 +58,18 @@ class attend():
             self.coeff = KL.Lambda(lambda x: x * 1/np.sqrt(depth), name=name+'_Coeff')
             self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
             self.conv2 = conv_step(depth, 5, pad='same', dil=2, name=name+'_2')
-            self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
-            self.dot1  = KL.Dot(axes=(2,1), name=name+'_Dot_1')
+            #self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
+            self.dot1  = KL.Dot(axes=(2,2), name=name+'_Dot_1')
             self.softm = KL.Softmax(name=name+'_Softmax')
             self.dot2  = KL.Dot(axes=(2,1), name=name+'_Dot_2')
 
     def __call__(self, x, y):
-        c   = self.coeff(x)
-        x_T = self.T(x)
-        y   = self.conv2(self.conv1(y))
-        out = self.dot2([self.softm(self.dot1([y, x_T])), c])
-        return out
+        with scope('attention_op'):
+            c   = self.coeff(x)
+            #x_T = self.T(x)
+            y   = self.conv2(self.conv1(y))
+            out = self.dot2([self.softm(self.dot1([y, x])), c])
+            return out
 
 class encoder():
     ''' Encoder consisting of 6 convolution blocks
@@ -81,7 +84,8 @@ class encoder():
             self.c6 = conv_block('ENCODER_6')
 
     def __call__(self, x, train):
-        return self.c6(self.c5(self.c4(self.c3(self.c2(self.c1(x, train=train), train=train), train=train), train=train), train=train), train=train)
+        with scope('encoder_op'):
+            return self.c6(self.c5(self.c4(self.c3(self.c2(self.c1(x, train=train), train=train), train=train), train=train), train=train), train=train)
 
 class io_mixer():
     ''' Mixer block with encoded Input and Output of the model
@@ -93,7 +97,8 @@ class io_mixer():
             self.conv   = conv_step(100, 3, 'same', 1, name='IO_MIX')
 
     def __call__(self, x, y):
-        return self.conv(self.concat([self.att(x, y), y]))
+        with scope('mixer_op'):
+            return self.conv(self.concat([self.att(x, y), y]))
 
 class decoder():
     ''' Decoder getting input from the Encoder and the output of the mixer
@@ -114,13 +119,14 @@ class decoder():
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
     def __call__(self, enc, x, train):
-        x = self.add([self.conv1(x, train=train), self.att1(enc, x)])
-        x = self.add([self.conv2(x, train=train), self.att2(enc, x)])
-        x = self.add([self.conv3(x, train=train), self.att3(enc, x)])
-        x = self.add([self.conv4(x, train=train), self.att4(enc, x)])
-        x = self.logit(x)
-        y = self.argmax(x)
-        return x, y
+        with scope('decoder_op'):
+            x = self.add([self.conv1(x, train=train), self.att1(enc, x)])
+            x = self.add([self.conv2(x, train=train), self.att2(enc, x)])
+            x = self.add([self.conv3(x, train=train), self.att3(enc, x)])
+            x = self.add([self.conv4(x, train=train), self.att4(enc, x)])
+            x = self.logit(x)
+            y = self.argmax(x)
+            return x, y
 
 class encoding_stage():
     ''' This is the whole Encoder with Embedding and positional encoding
@@ -132,7 +138,8 @@ class encoding_stage():
             self.enc   = encoder()
 
     def __call__(self, Input, train=1):
-        return self.enc(self.pos(self.embed(Input)), train=train)
+        with scope('encoding_stage_op'):
+            return self.enc(self.pos(self.embed(Input)), train=train)
 
 class decoding_stage():
     ''' This is the whole decoder with Embedding and timing
@@ -153,32 +160,33 @@ class decoding_stage():
             #self.output = []
 
     def __call__(self, enc, Input, train):
-        c        = self.timing(self.embed(Input))
-        #c       = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
-        mix      = self.mix(enc, c)
-        log, dec = self.dec(enc, mix, train=train)
-        out      = self.reshape(dec)
-        #if self.train:
-        return log, out
+        with scope('decoding_stage_op'):
+            c        = self.timing(self.embed(Input))
+            #c       = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
+            mix      = self.mix(enc, c)
+            log, dec = self.dec(enc, mix, train=train)
+            out      = self.reshape(dec)
+            #if self.train:
+            return log, out
 
-        self.i = 1
-        output = self.slice(out)
-        self.output.append(output)
-        out    = self.unstack(out)
-
-        for i in range(1,self.maxLen):
-            c      = self.timing(self.embed(out[:i]))
-            c      = self.embed_reshape(c)
-            #c     = KL.Lambda(lambda x: KB.concatenate([x[:,:i], x[:,i:]*0], axis=1))(c)
-            mix    = self.mix(enc, c)
-            dec    = self.dec(enc, mix)
-            out    = self.reshape(dec)
-            self.i = i
+            self.i = 1
             output = self.slice(out)
             self.output.append(output)
-        result = self.stack(self.output)
+            out    = self.unstack(out)
 
-        return KL.Lambda(lambda x: KB.squeeze(x, axis=2))(result)
+            for i in range(1,self.maxLen):
+                c      = self.timing(self.embed(out[:i]))
+                c      = self.embed_reshape(c)
+                #c     = KL.Lambda(lambda x: KB.concatenate([x[:,:i], x[:,i:]*0], axis=1))(c)
+                mix    = self.mix(enc, c)
+                dec    = self.dec(enc, mix)
+                out    = self.reshape(dec)
+                self.i = i
+                output = self.slice(out)
+                self.output.append(output)
+            result = self.stack(self.output)
+
+            return KL.Lambda(lambda x: KB.squeeze(x, axis=2))(result)
 
 class SliceNet():
     def __init__(self, vocab_size=4000, maxLen=40, depth=100):
@@ -210,11 +218,12 @@ class SliceNet():
         print('Model comiled')
         #self.model.summary()
 
-    def predict(self, src, start=1, end=2):
+    def predict(self, src):
         self.train = 0
         batch_size = src.shape[0]
         output = np.zeros((batch_size, self.maxLen), dtype=int)
         output[:,0] = 1
+        print('out: ', output)
         end_found = False
         prediction = []
         idx = 0
