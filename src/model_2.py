@@ -219,22 +219,12 @@ class SliceNet():
         prediction = []
         idx = 0
         while True:
-            print('output: \n')
-            print(output)
             log = self.model.predict([src, output])
-            # Predict the phoneme with the highest probability
             dec_out = np.argmax(log, axis=2)
-            print('\ndec_out: \n')
-            print(dec_out[:,idx])
-            print('log: \n')
-            print(log[:,idx])
-            #predicted_idx = np.argmax(decoder_output[0, :])
-            prediction.append(dec_out[:,idx])
-            if len(prediction) >= self.maxLen:
-                break
-            # Setup inputs for next time step
             output[:, idx+1] = dec_out[:,idx]
             idx += 1
+            if idx >= self.maxLen:
+                break
         return output
 
 #sn = SliceNet()

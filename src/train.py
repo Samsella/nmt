@@ -62,7 +62,7 @@ def train():
         model.load_weights('chpt.keras')
         print('Weights loaded')
 
-    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=10,
+    model.fit(x=[data_X, data_y], y=data_y, batch_size=64, epochs=0,
               verbose=2, validation_split=0.002, callbacks=callbacks)
 
     print(test_y[:1])
