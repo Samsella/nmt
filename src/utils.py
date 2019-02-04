@@ -40,7 +40,7 @@ class data():
                 --vocab_size={size} \
                 --unk_id=3 \
                 --pad_id=0'.format(
-                    input=self.path,
+                    input=path,
                     name=name,
                     size=size))
         spm = spp()
@@ -84,8 +84,8 @@ class data():
             en = [line for line in open(self.paths[1], encoding='utf8')]
             de = [line for line in open(self.paths[0], encoding='utf8')]
             if test:
-                en = en[:5000]
-                de = de[:5000]
+                en = en[:50000]
+                de = de[:50000]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
                 en = []

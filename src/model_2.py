@@ -32,13 +32,13 @@ class conv_block():
     ''' One Convolution block consisting of 4 conv_steps with residual
         connections
     '''
-    def __init__(self, name, pad='same', depth=100):
+    def __init__(self, name, pad='same', depth=300):
         with scope('conv_block'):
             self.conv1   = conv_step(depth, 3, pad=pad, name=name+'_1')
-            self.conv2   = conv_step(100, 3, pad=pad, name=name+'_2')
+            self.conv2   = conv_step(300, 3, pad=pad, name=name+'_2')
             self.add1    = KL.Add(name=name+'_Add_1')
             self.conv3   = conv_step(depth, 15, pad=pad, name=name+'_3')
-            self.conv4   = conv_step(100, 15, pad=pad, dil=4,name=name+'_4')
+            self.conv4   = conv_step(300, 15, pad=pad, dil=4,name=name+'_4')
             self.add2    = KL.Add(name=name+'_Add_2')
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
@@ -46,18 +46,17 @@ class conv_block():
         with scope('conv_block'):
             y   = self.add1([x, self.conv2(self.conv1(x))])
             out = self.add2([x, self.conv4(self.conv3(y))])
-            if train:
-                out = self.dropout(out)
+            out = self.dropout(out, training=train)
             return out
 
 class attend():
     ''' Attention block
     '''
-    def __init__(self, name, pad='same', depth=100):
+    def __init__(self, name, pad='same', depth=300):
         with scope('attention'):
             self.coeff = KL.Lambda(lambda x: x * 1/np.sqrt(depth), name=name+'_Coeff')
             self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
-            self.conv2 = conv_step(depth, 5, pad='same', dil=2, name=name+'_2')
+            self.conv2 = conv_step(depth, 5, pad=pad, dil=2, name=name+'_2')
             #self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
             self.dot1  = KL.Dot(axes=(2,2), name=name+'_Dot_1')
             self.softm = KL.Softmax(name=name+'_Softmax')
@@ -94,7 +93,7 @@ class io_mixer():
         with scope('mixer'):
             self.att    = attend('IO_MIX_attention')
             self.concat = KL.Concatenate(name='IO_MIX_concat')
-            self.conv   = conv_step(100, 3, 'same', 1, name='IO_MIX')
+            self.conv   = conv_step(300, 3, 'valid', 1, name='IO_MIX')
 
     def __call__(self, x, y):
         with scope('mixer_op'):
@@ -133,7 +132,7 @@ class encoding_stage():
     '''
     def __init__(self, maxLen, vocab_size, sins):
         with scope('encoding_stage'):
-            self.embed = KL.Embedding(vocab_size, 100, input_length=maxLen, name='Input_Embedding')
+            self.embed = KL.Embedding(vocab_size, 300, input_length=maxLen, name='Input_Embedding')
             self.pos   = KL.Lambda(lambda x: x+sins,name='Positional_Encoding')
             self.enc   = encoder()
 
@@ -147,7 +146,7 @@ class decoding_stage():
     def __init__(self, maxLen, vocab_size, sins):
         with scope('decoding_stage'):
             self.maxLen  = maxLen
-            self.embed   = KL.Embedding(vocab_size, 100, name='Output_Embedding')
+            self.embed   = KL.Embedding(vocab_size, 300, name='Output_Embedding')
             self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
             self.mix     = io_mixer()
             self.dec     = decoder(vocab_size)
@@ -189,19 +188,19 @@ class decoding_stage():
             return KL.Lambda(lambda x: KB.squeeze(x, axis=2))(result)
 
 class SliceNet():
-    def __init__(self, vocab_size=4000, maxLen=40, depth=100):
+    def __init__(self, vocab_size=4000, maxLen=40, depth=300):
         '''
         Creates a SliceNet Model
         '''
-        self.train = 1
+        self.train = tf.placeholder_with_default(True, (), name= 'training')
         self.vocab_size = vocab_size
         self.maxLen     = maxLen
         self.depth      = depth
         self.sins       = 0.01*np.array([
-            np.sin(np.array(range(maxLen))/(10000**(2*(d//2)/100)))
+            np.sin(np.array(range(maxLen))/(10000**(2*(d//2)/depth)))
             if d%2 == 0 else
-            np.cos(np.array(range(maxLen))/(10000**(2*(d//2)/100)))
-            for d in range(100)]).T
+            np.cos(np.array(range(maxLen))/(10000**(2*(d//2)/depth)))
+            for d in range(depth)]).T
 
         self.encoding = encoding_stage(self.maxLen, self.vocab_size, self.sins)
         self.decoding = decoding_stage(self.maxLen, self.vocab_size, self.sins)
@@ -223,19 +222,12 @@ class SliceNet():
         batch_size = src.shape[0]
         output = np.zeros((batch_size, self.maxLen), dtype=int)
         output[:,0] = 1
-        print('out: ', output)
-        end_found = False
-        prediction = []
-        idx = 0
-        while True:
+        for index in range(self.maxLen-2):
             log = self.model.predict([src, output])
             dec_out = np.argmax(log, axis=2)
             output[:, idx+1] = dec_out[:,idx]
-            idx += 1
-            if idx >= self.maxLen-1:
-                break
         return output
 
-#sn = SliceNet()
-#sn.compile('Adam', 'binary_crossentropy')
-#sn.model.summary()
+sn = SliceNet()
+sn.compile('Adam', 'binary_crossentropy')
+sn.model.summary()
