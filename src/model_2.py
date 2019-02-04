@@ -54,7 +54,7 @@ class attend():
     '''
     def __init__(self, name, pad='same', depth=300):
         with scope('attention'):
-            self.coeff = KL.Lambda(lambda x: x * 1/np.sqrt(depth), name=name+'_Coeff')
+            self.coeff = KL.Lambda(lambda x: x/np.sqrt(depth), name=name+'_Coeff')
             self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
             self.conv2 = conv_step(depth, 5, pad=pad, dil=2, name=name+'_2')
             #self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
@@ -91,7 +91,7 @@ class io_mixer():
     '''
     def __init__(self):
         with scope('mixer'):
-            self.att    = attend('IO_MIX_attention')
+            self.att    = attend('IO_MIX_attention', pad='valid')
             self.concat = KL.Concatenate(name='IO_MIX_concat')
             self.conv   = conv_step(300, 3, 'valid', 1, name='IO_MIX')
 
@@ -113,7 +113,8 @@ class decoder():
             self.conv4 = conv_block('DECODER_conv4', pad='valid')
             self.att4  = attend('DECODER_att_4', pad='valid')
             self.add   = KL.Add(name='DECODER_add')
-            self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
+            self.logit = KL.Dense(vocab_size, name='DECODER_DENSE')
+            #self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
             #self.logit = KL.Softmax(name='DECODER_OUT')
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
@@ -150,7 +151,7 @@ class decoding_stage():
             self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
             self.mix     = io_mixer()
             self.dec     = decoder(vocab_size)
-            self.reshape = KL.Reshape((maxLen,))
+            #self.reshape = KL.Reshape((maxLen,))
             #self.embed_reshape = KL.Reshape((100,))
             #self.unstack = KL.Lambda(lambda x: tf.unstack(x, num=maxLen, axis=1))
             #self.i = 0
@@ -164,28 +165,9 @@ class decoding_stage():
             #c       = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
             mix      = self.mix(enc, c)
             log, dec = self.dec(enc, mix, train=train)
-            out      = self.reshape(dec)
+            #out      = self.reshape(dec)
             #if self.train:
-            return log, out
-
-            self.i = 1
-            output = self.slice(out)
-            self.output.append(output)
-            out    = self.unstack(out)
-
-            for i in range(1,self.maxLen):
-                c      = self.timing(self.embed(out[:i]))
-                c      = self.embed_reshape(c)
-                #c     = KL.Lambda(lambda x: KB.concatenate([x[:,:i], x[:,i:]*0], axis=1))(c)
-                mix    = self.mix(enc, c)
-                dec    = self.dec(enc, mix)
-                out    = self.reshape(dec)
-                self.i = i
-                output = self.slice(out)
-                self.output.append(output)
-            result = self.stack(self.output)
-
-            return KL.Lambda(lambda x: KB.squeeze(x, axis=2))(result)
+            return log, dec
 
 class SliceNet():
     def __init__(self, vocab_size=4000, maxLen=40, depth=300):
@@ -228,6 +210,6 @@ class SliceNet():
             output[:, idx+1] = dec_out[:,idx]
         return output
 
-sn = SliceNet()
-sn.compile('Adam', 'binary_crossentropy')
-sn.model.summary()
+#sn = SliceNet()
+#sn.compile('Adam', 'binary_crossentropy')
+#sn.model.summary()
