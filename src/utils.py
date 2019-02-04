@@ -84,8 +84,8 @@ class data():
             en = [line for line in open(self.paths[1], encoding='utf8')]
             de = [line for line in open(self.paths[0], encoding='utf8')]
             if test:
-                en = en[:50000]
-                de = de[:50000]
+                en = en[:800000]
+                de = de[:800000]
         else:
             with open(self.path, 'r', encoding='utf8') as f:
                 en = []

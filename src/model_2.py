@@ -25,6 +25,7 @@ class conv_step():
         with scope('conv_step_op'):
             if self.pad != 'same':
                 x = self.padding(x)
+                print(x)
             return self.norm(self.conv(self.act(x)))
 
 
@@ -32,13 +33,13 @@ class conv_block():
     ''' One Convolution block consisting of 4 conv_steps with residual
         connections
     '''
-    def __init__(self, name, pad='same', depth=300):
+    def __init__(self, name, pad='same', depth=1000):
         with scope('conv_block'):
             self.conv1   = conv_step(depth, 3, pad=pad, name=name+'_1')
-            self.conv2   = conv_step(300, 3, pad=pad, name=name+'_2')
+            self.conv2   = conv_step(1000, 3, pad=pad, name=name+'_2')
             self.add1    = KL.Add(name=name+'_Add_1')
             self.conv3   = conv_step(depth, 15, pad=pad, name=name+'_3')
-            self.conv4   = conv_step(300, 15, pad=pad, dil=4,name=name+'_4')
+            self.conv4   = conv_step(1000, 15, pad=pad, dil=4,name=name+'_4')
             self.add2    = KL.Add(name=name+'_Add_2')
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
@@ -52,7 +53,7 @@ class conv_block():
 class attend():
     ''' Attention block
     '''
-    def __init__(self, name, pad='same', depth=300):
+    def __init__(self, name, pad='same', depth=1000):
         with scope('attention'):
             self.coeff = KL.Lambda(lambda x: x/np.sqrt(depth), name=name+'_Coeff')
             self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
@@ -93,7 +94,7 @@ class io_mixer():
         with scope('mixer'):
             self.att    = attend('IO_MIX_attention', pad='valid')
             self.concat = KL.Concatenate(name='IO_MIX_concat')
-            self.conv   = conv_step(300, 3, 'valid', 1, name='IO_MIX')
+            self.conv   = conv_step(1000, 3, 'valid', 1, name='IO_MIX')
 
     def __call__(self, x, y):
         with scope('mixer_op'):
@@ -113,8 +114,8 @@ class decoder():
             self.conv4 = conv_block('DECODER_conv4', pad='valid')
             self.att4  = attend('DECODER_att_4', pad='valid')
             self.add   = KL.Add(name='DECODER_add')
-            self.logit = KL.Dense(vocab_size, name='DECODER_DENSE')
-            #self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
+            #self.logit = KL.Dense(vocab_size, name='DECODER_DENSE')
+            self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
             #self.logit = KL.Softmax(name='DECODER_OUT')
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
@@ -133,7 +134,7 @@ class encoding_stage():
     '''
     def __init__(self, maxLen, vocab_size, sins):
         with scope('encoding_stage'):
-            self.embed = KL.Embedding(vocab_size, 300, input_length=maxLen, name='Input_Embedding')
+            self.embed = KL.Embedding(vocab_size, 1000, input_length=maxLen, name='Input_Embedding')
             self.pos   = KL.Lambda(lambda x: x+sins,name='Positional_Encoding')
             self.enc   = encoder()
 
@@ -147,7 +148,7 @@ class decoding_stage():
     def __init__(self, maxLen, vocab_size, sins):
         with scope('decoding_stage'):
             self.maxLen  = maxLen
-            self.embed   = KL.Embedding(vocab_size, 300, name='Output_Embedding')
+            self.embed   = KL.Embedding(vocab_size, 1000, name='Output_Embedding')
             self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
             self.mix     = io_mixer()
             self.dec     = decoder(vocab_size)
@@ -170,7 +171,7 @@ class decoding_stage():
             return log, dec
 
 class SliceNet():
-    def __init__(self, vocab_size=4000, maxLen=40, depth=300):
+    def __init__(self, vocab_size=4000, maxLen=40, depth=1000):
         '''
         Creates a SliceNet Model
         '''
@@ -204,7 +205,7 @@ class SliceNet():
         batch_size = src.shape[0]
         output = np.zeros((batch_size, self.maxLen), dtype=int)
         output[:,0] = 1
-        for index in range(self.maxLen-2):
+        for idx in range(self.maxLen-2):
             log = self.model.predict([src, output])
             dec_out = np.argmax(log, axis=2)
             output[:, idx+1] = dec_out[:,idx]
