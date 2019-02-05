@@ -25,7 +25,6 @@ class conv_step():
         with scope('conv_step_op'):
             if self.pad != 'same':
                 x = self.padding(x)
-                print(x)
             return self.norm(self.conv(self.act(x)))
 
 
@@ -44,7 +43,7 @@ class conv_block():
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
     def __call__(self, x, train):
-        with scope('conv_block'):
+        with scope('conv_block_op'):
             y   = self.add1([x, self.conv2(self.conv1(x))])
             out = self.add2([x, self.conv4(self.conv3(y))])
             out = self.dropout(out, training=train)
@@ -53,12 +52,11 @@ class conv_block():
 class attend():
     ''' Attention block
     '''
-    def __init__(self, name, pad='same', depth=1000):
+    def __init__(self, name, pad='valid', depth=1000):
         with scope('attention'):
             self.coeff = KL.Lambda(lambda x: x/np.sqrt(depth), name=name+'_Coeff')
             self.conv1 = conv_step(depth, 5, pad=pad, dil=1, name=name+'_1')
             self.conv2 = conv_step(depth, 5, pad=pad, dil=2, name=name+'_2')
-            #self.T     = KL.Lambda(lambda x: KB.permute_dimensions(x, (0,2,1)), name=name+'_Transpose')
             self.dot1  = KL.Dot(axes=(2,2), name=name+'_Dot_1')
             self.softm = KL.Softmax(name=name+'_Softmax')
             self.dot2  = KL.Dot(axes=(2,1), name=name+'_Dot_2')
@@ -66,7 +64,6 @@ class attend():
     def __call__(self, x, y):
         with scope('attention_op'):
             c   = self.coeff(x)
-            #x_T = self.T(x)
             y   = self.conv2(self.conv1(y))
             out = self.dot2([self.softm(self.dot1([y, x])), c])
             return out
