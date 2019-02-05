@@ -12,11 +12,11 @@ from keras.losses import sparse_categorical_crossentropy as scc
 #from tensorflow.nn import sparse_softmax_cross_entropy_with_logits as tfscc
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 def train():
-    #path2data = '../../../../data/europarl/de-en/'
-    path2data = '../data/de-en/'
+    path2data = '../../../../data/europarl/de-en/'
+    #path2data = '../data/de-en/'
     files = [path2data+'europarl-v7.de-en.de',
              path2data+'europarl-v7.de-en.en']
     d = data(files, size=4000)
@@ -28,15 +28,23 @@ def train():
         np.savez_compressed('data', a=data_X, b=data_y, c=labels)
     else:
         d = np.load('data.npz')
-        data_X, data_y, labels = d['data_X'], d['data_y'], d['labels']
+        data_X, data_y, labels = d['a'], d['b'], d['c']
 
     train_X, test_X, train_y, test_y, train_labels, test_labels= train_test_split(data_X, data_y, labels, test_size=0.002, random_state=13)
+    print('\nTrain: \n')
     print(train_X[150:151])
     print(d.decode(train_X[150:151], 'en'))
     print(train_y[150:151])
     print(d.decode(train_y[150:151], 'de'))
     print(train_labels[150:151])
     print(d.decode(train_labels[150:151], 'de'))
+    print('\nTest: \n')
+    print(test_X[150:151])
+    print(d.decode(test_X[150:151], 'en'))
+    print(test_y[150:151])
+    print(d.decode(test_y[150:151], 'de'))
+    print(test_labels[150:151])
+    print(d.decode(test_labels[150:151], 'de'))
 
 
     def sl(y_true, y_pred):
@@ -67,11 +75,11 @@ def train():
     sn.compile('Adam', sl)
     model = sn.model
 
-    if os.path.exists('chpt20.keras'):
-        model.load_weights('chpt20.keras')
+    if os.path.exists('chpt.keras'):
+        model.load_weights('chpt.keras')
         print('Weights loaded')
 
-    model.fit(x=[train_X, train_y], y=train_labels, batch_size=16, epochs=10,
+    model.fit(x=[train_X, train_y], y=train_labels, batch_size=128, epochs=0,
               verbose=2, validation_split=0.002, callbacks=callbacks)
 
     print(test_y[1,:])

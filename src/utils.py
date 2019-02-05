@@ -14,8 +14,8 @@ class data():
     def __init__(self, path='../data/deu.txt', size=4000):
         self.paths = path
         self.path = self.create_path(path)
-        self.spm_de_y = self.sp(size, 'de', path[0])
-        self.spm_de_l = self.sp(size, 'de', path[0])
+        self.spm_de_y = self.sp(size, 'de', path[0])   # in2 without eos
+        self.spm_de_l = self.spm_de_y                  # label without bos
         self.spm_en = self.sp(size, 'en', path[1])
         self.spm_de_y.SetEncodeExtraOptions('bos')
         self.spm_de_l.SetEncodeExtraOptions('eos')
@@ -62,14 +62,14 @@ class data():
             tgt.append(s3)
         # create arrays
         arr_src = np.zeros((len(src), maxLen))
-        arr_l   = np.zeros((len(yy), maxLen))
+        arr_yy   = np.zeros((len(yy), maxLen))
         arr_tgt = np.zeros((len(tgt), maxLen))
         # fill arrays
         for idx, (sent1, sent2, sent3) in enumerate(zip(src, yy, tgt)):
             arr_src[idx, :len(sent1)] = sent1
-            arr_l[idx, :len(sent2)]   = sent2
+            arr_yy[idx, :len(sent2)]  = sent2
             arr_tgt[idx, :len(sent2)] = sent3
-        return arr_src, arr_tgt, arr_l
+        return arr_src, arr_yy, arr_tgt
 
     def decode(self, arr, lang):
         if lang == 'de':
@@ -99,8 +99,6 @@ class data():
 
     def get_data(self, test=0):
         a, b, c = self.create_data(test)
-        b1 = np.concatenate([b[:,:-1], np.zeros(b[:,:1].shape)], axis=1)
-        b2 = np.concatenate([b[:,1:], np.zeros(b[:,:1].shape)], axis=1)
         return a.astype(int), b.astype(int), c.astype(int)
 
 
