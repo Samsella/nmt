@@ -4,6 +4,7 @@
 import numpy as np
 from sentencepiece import SentencePieceProcessor as spp
 from sentencepiece import SentencePieceTrainer as spt
+from copy import deepcopy as dc
 import os
 import warnings
 warnings.simplefilter('ignore')
@@ -15,7 +16,7 @@ class data():
         self.paths = path
         self.path = self.create_path(path)
         self.spm_de_y = self.sp(size, 'de', path[0])   # in2 without eos
-        self.spm_de_l = self.spm_de_y                  # label without bos
+        self.spm_de_l = self.sp(size, 'de', path[0])   # label without bos
         self.spm_en = self.sp(size, 'en', path[1])
         self.spm_de_y.SetEncodeExtraOptions('bos')
         self.spm_de_l.SetEncodeExtraOptions('eos')

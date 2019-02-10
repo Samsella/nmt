@@ -35,10 +35,10 @@ class conv_block():
     def __init__(self, name, pad='same', depth=1000):
         with scope('conv_block'):
             self.conv1   = conv_step(depth, 3, pad=pad, name=name+'_1')
-            self.conv2   = conv_step(1000, 3, pad=pad, name=name+'_2')
+            self.conv2   = conv_step(depth, 3, pad=pad, name=name+'_2')
             self.add1    = KL.Add(name=name+'_Add_1')
             self.conv3   = conv_step(depth, 15, pad=pad, name=name+'_3')
-            self.conv4   = conv_step(1000, 15, pad=pad, dil=4,name=name+'_4')
+            self.conv4   = conv_step(depth, 15, pad=pad, dil=4,name=name+'_4')
             self.add2    = KL.Add(name=name+'_Add_2')
             self.dropout = KL.Dropout(0.5, name=name+'_Dropout')
 
@@ -46,7 +46,7 @@ class conv_block():
         with scope('conv_block_op'):
             y   = self.add1([x, self.conv2(self.conv1(x))])
             out = self.add2([x, self.conv4(self.conv3(y))])
-            out = self.dropout(out, training=train)
+            out = self.dropout(out)
             return out
 
 class attend():
@@ -71,14 +71,14 @@ class attend():
 class encoder():
     ''' Encoder consisting of 6 convolution blocks
     '''
-    def __init__(self):
+    def __init__(self, depth=1000):
         with scope('encoder'):
-            self.c1 = conv_block('ENCODER_1')
-            self.c2 = conv_block('ENCODER_2')
-            self.c3 = conv_block('ENCODER_3')
-            self.c4 = conv_block('ENCODER_4')
-            self.c5 = conv_block('ENCODER_5')
-            self.c6 = conv_block('ENCODER_6')
+            self.c1 = conv_block('ENCODER_1', depth=depth)
+            self.c2 = conv_block('ENCODER_2', depth=depth)
+            self.c3 = conv_block('ENCODER_3', depth=depth)
+            self.c4 = conv_block('ENCODER_4', depth=depth)
+            self.c5 = conv_block('ENCODER_5', depth=depth)
+            self.c6 = conv_block('ENCODER_6', depth=depth)
 
     def __call__(self, x, train):
         with scope('encoder_op'):
@@ -87,11 +87,11 @@ class encoder():
 class io_mixer():
     ''' Mixer block with encoded Input and Output of the model
     '''
-    def __init__(self):
+    def __init__(self, depth=1000):
         with scope('mixer'):
-            self.att    = attend('IO_MIX_attention', pad='valid')
+            self.att    = attend('IO_MIX_attention', pad='valid', depth=depth)
             self.concat = KL.Concatenate(name='IO_MIX_concat')
-            self.conv   = conv_step(1000, 3, 'valid', 1, name='IO_MIX')
+            self.conv   = conv_step(depth, 3, 'valid', 1, name='IO_MIX')
 
     def __call__(self, x, y):
         with scope('mixer_op'):
@@ -100,16 +100,16 @@ class io_mixer():
 class decoder():
     ''' Decoder getting input from the Encoder and the output of the mixer
     '''
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, depth=1000):
         with scope('decoder'):
-            self.conv1 = conv_block('DECODER_conv1', pad='valid')
-            self.att1  = attend('DECODER_att_1', pad='valid')
-            self.conv2 = conv_block('DECODER_conv2', pad='valid')
-            self.att2  = attend('DECODER_att_2', pad='valid')
-            self.conv3 = conv_block('DECODER_conv3', pad='valid')
-            self.att3  = attend('DECODER_att_3', pad='valid')
-            self.conv4 = conv_block('DECODER_conv4', pad='valid')
-            self.att4  = attend('DECODER_att_4', pad='valid')
+            self.conv1 = conv_block('DECODER_conv1', pad='valid', depth=depth)
+            self.att1  = attend('DECODER_att_1', pad='valid', depth=depth)
+            self.conv2 = conv_block('DECODER_conv2', pad='valid', depth=depth)
+            self.att2  = attend('DECODER_att_2', pad='valid', depth=depth)
+            self.conv3 = conv_block('DECODER_conv3', pad='valid', depth=depth)
+            self.att3  = attend('DECODER_att_3', pad='valid', depth=depth)
+            self.conv4 = conv_block('DECODER_conv4', pad='valid', depth=depth)
+            self.att4  = attend('DECODER_att_4', pad='valid', depth=depth)
             self.add   = KL.Add(name='DECODER_add')
             #self.logit = KL.Dense(vocab_size, name='DECODER_DENSE')
             self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
@@ -129,11 +129,11 @@ class decoder():
 class encoding_stage():
     ''' This is the whole Encoder with Embedding and positional encoding
     '''
-    def __init__(self, maxLen, vocab_size, sins):
+    def __init__(self, maxLen, vocab_size, sins, depth=1000):
         with scope('encoding_stage'):
-            self.embed = KL.Embedding(vocab_size, 1000, input_length=maxLen, name='Input_Embedding')
+            self.embed = KL.Embedding(vocab_size, depth, input_length=maxLen, name='Input_Embedding')
             self.pos   = KL.Lambda(lambda x: x+sins,name='Positional_Encoding')
-            self.enc   = encoder()
+            self.enc   = encoder(depth=depth)
 
     def __call__(self, Input, train=1):
         with scope('encoding_stage_op'):
@@ -142,13 +142,13 @@ class encoding_stage():
 class decoding_stage():
     ''' This is the whole decoder with Embedding and timing
     '''
-    def __init__(self, maxLen, vocab_size, sins):
+    def __init__(self, maxLen, vocab_size, sins, depth=1000):
         with scope('decoding_stage'):
             self.maxLen  = maxLen
-            self.embed   = KL.Embedding(vocab_size, 1000, name='Output_Embedding')
+            self.embed   = KL.Embedding(vocab_size, depth, name='Output_Embedding')
             self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
-            self.mix     = io_mixer()
-            self.dec     = decoder(vocab_size)
+            self.mix     = io_mixer(depth=depth)
+            self.dec     = decoder(vocab_size, depth)
             #self.reshape = KL.Reshape((maxLen,))
             #self.embed_reshape = KL.Reshape((100,))
             #self.unstack = KL.Lambda(lambda x: tf.unstack(x, num=maxLen, axis=1))
@@ -182,8 +182,8 @@ class SliceNet():
             np.cos(np.array(range(maxLen))/(10000**(2*(d//2)/depth)))
             for d in range(depth)]).T
 
-        self.encoding = encoding_stage(self.maxLen, self.vocab_size, self.sins)
-        self.decoding = decoding_stage(self.maxLen, self.vocab_size, self.sins)
+        self.encoding = encoding_stage(self.maxLen, self.vocab_size, self.sins, self.depth)
+        self.decoding = decoding_stage(self.maxLen, self.vocab_size, self.sins, self.depth)
         print('Model created')
 
 
@@ -206,6 +206,9 @@ class SliceNet():
             log = self.model.predict([src, output])
             dec_out = np.argmax(log, axis=2)
             output[:, idx+1] = dec_out[:,idx]
+        for row in output:
+            eos = np.where(row==2)[0][0]
+            row[eos+1:] = 0
         return output
 
 #sn = SliceNet()
