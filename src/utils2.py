@@ -16,13 +16,6 @@ class data():
         self.paths = path
         self.path = self.create_path(path)
         self.spm = self.sp(size, 'shared', self.path)
-        #self.spm_de_y = self.sp(size, 'de', path[0])   # in2 without eos
-        #self.spm_de_l = self.sp(size, 'de', path[0])   # label without bos
-        #self.spm_en = self.sp(size, 'en', path[1])
-        #self.spm_es = self.sp(size, 'es', path[2])
-        #self.spm_fr = self.sp(size, 'fr', path[3])
-        #self.spm_de_y.SetEncodeExtraOptions('bos')
-        #self.spm_de_l.SetEncodeExtraOptions('eos')
         self.spm.SetEncodeExtraOptions('bos:eos')
 
     def create_path(self, path):
@@ -56,8 +49,6 @@ class data():
         # encode sentences
         s = list(map(self.spm.EncodeAsIds, src))
         y = list(map(self.spm.EncodeAsIds, tgt))
-        #t = list(map(self.spm_de_l.EncodeAsIds, tgt))
-        #src, yy, tgt = [], [], []
         src, yy = [], []
         # remove sentences longer than maxLen
         for s1, s2 in zip(s,y):
@@ -110,14 +101,3 @@ class data():
     def get_data(self, test=0):
         a, b, c = self.create_data(test)
         return a.astype(int), b.astype(int), c.astype(int)
-
-
-#path2data = '../data/de-en/'
-#files = [path2data+'europarl-v7.de-en.de',
-#         path2data+'europarl-v7.de-en.en']
-#d = data(files, size=8000)
-#a, b = d.get_data()
-#c = d.decode(b[5000:5002], 'en')
-#print(c)
-#c = d.decode(b[5000:5002], 'de')
-#print(c)

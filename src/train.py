@@ -21,7 +21,7 @@ def train():
              path2data+'europarl-v7.de-en.en']
     d = data(files, size=16000)
     test = 0
-    
+
     if not os.path.exists('data_16000.npz') or test:
         if test:
             if not os.path.exists('data_small.npz'):
@@ -36,10 +36,9 @@ def train():
     else:
         dat = np.load('data_16000.npz')
         data_X, data_y, labels = dat['a'], dat['b'], dat['c']
-    print(data_X.shape, data_y.shape, labels.shape)
-    
+
     train_X, test_X, train_y, test_y, train_labels, test_labels= train_test_split(data_X, data_y, labels, test_size=0.002, random_state=15)
-    
+
     def sl(y_true, y_pred):
         ''' wrap for sparse_categorical_crossentropy to bypass the adding
             of an extra dimension
@@ -64,23 +63,25 @@ def train():
                  callback_tensorboard]
 
     adam = Adam(lr=0.002)
-    #sn = SliceNet(vocab_size=4000, depth=1200)
-    #sn.compile(adam, sl)
-    #model = sn.model
- 
-    #if os.path.exists('chpts/chpt40_4001_1200.keras'):
-    #    model.load_weights('chpts/chpt40_4001_1200.keras')
-    #    print('Weights loaded')
+    sn = SliceNet(vocab_size=4000, depth=1200)
+    sn.compile(adam, sl)
+    model = sn.model
 
-    #model.fit(x=[train_X[:500000], train_y[:500000]], y=train_labels[:500000], batch_size=80, epochs=40,
-     #         verbose=2, validation_split=0.002, callbacks=callbacks)
+    if os.path.exists('chpts/chpt40_4001_1200.keras'):
+        model.load_weights('chpts/chpt40_4001_1200.keras')
+        print('Weights loaded')
+
+    model.fit(x=[train_X[:500000], train_y[:500000]], y=train_labels[:500000], batch_size=80, epochs=40,
+              verbose=2, validation_split=0.002, callbacks=callbacks)
 
 
-    #p = sn.predict(test_X)
-    #decoded_de = d.decode(np.array(p), 'shared')
-    original = d.decode(test_labels, 'shared')
-    #with open('results/model_4001_1200.txt', 'w', encoding='utf8') as f:
-    #    f.write('\n'.join(decoded_de))
-    with open('results/original_de_16000.txt', 'w', encoding='utf8') as f:
-        f.write('\n'.join(original))
-train()    
+    p = sn.predict(test_X)
+    decoded_de = d.decode(np.array(p), 'shared')
+    with open('results/model_4001_1200.txt', 'w', encoding='utf8') as f:
+        f.write('\n'.join(decoded_de))
+
+    #original = d.decode(test_labels, 'shared')
+    #with open('results/original_de_16000.txt', 'w', encoding='utf8') as f:
+    #    f.write('\n'.join(original))
+
+train()

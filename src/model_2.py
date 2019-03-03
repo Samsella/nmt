@@ -111,9 +111,7 @@ class decoder():
             self.conv4 = conv_block('DECODER_conv4', pad='valid', depth=depth)
             self.att4  = attend('DECODER_att_4', pad='valid', depth=depth)
             self.add   = KL.Add(name='DECODER_add')
-            #self.logit = KL.Dense(vocab_size, name='DECODER_DENSE')
             self.logit = KL.Dense(vocab_size, activation='softmax', name='DECODER_DENSE')
-            #self.logit = KL.Softmax(name='DECODER_OUT')
             self.argmax = KL.Lambda(lambda x: KB.argmax(x))
 
     def __call__(self, enc, x, train):
@@ -149,22 +147,12 @@ class decoding_stage():
             self.timing  = KL.Lambda(lambda x: x+sins,name='Timing_Encoding')
             self.mix     = io_mixer(depth=depth)
             self.dec     = decoder(vocab_size, depth)
-            #self.reshape = KL.Reshape((maxLen,))
-            #self.embed_reshape = KL.Reshape((100,))
-            #self.unstack = KL.Lambda(lambda x: tf.unstack(x, num=maxLen, axis=1))
-            #self.i = 0
-            #self.slice = KL.Lambda(lambda x: x[:,self.i:self.i+1])
-            #self.stack = KL.Lambda(lambda x: KB.stack(x, axis=1))
-            #self.output = []
 
     def __call__(self, enc, Input, train):
         with scope('decoding_stage_op'):
             c        = self.timing(self.embed(Input))
-            #c       = KL.Lambda(lambda x: KB.concatenate([x[:,:0], x[:,0:]*0], axis=1))(c)
             mix      = self.mix(enc, c)
             log, dec = self.dec(enc, mix, train=train)
-            #out      = self.reshape(dec)
-            #if self.train:
             return log, dec
 
 class SliceNet():
@@ -213,7 +201,3 @@ class SliceNet():
             except:
                 pass
         return output
-
-#sn = SliceNet()
-#sn.compile('Adam', 'binary_crossentropy')
-#sn.model.summary()
