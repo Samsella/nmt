@@ -18,7 +18,7 @@ class conv_step():
             self.pad     = pad
             self.padding = KL.ZeroPadding1D(padding=((length-1)*dil,0))
             self.act     = KL.Activation('relu', name=name+'_Act')
-            self.conv    = KL.SeparableConv1D(filters, length, padding=pad, dilation_rate=dil, name=name+'_SepConv')
+            self.conv    = KL.SeparableConv1D(filters, length, padding=pad, dilation_rate=dil, name=name+'_SepConv', depth_multiplier=1)
             self.norm    = LayerNormalization(name=name+'_Norm')
 
     def __call__(self, x):
@@ -207,8 +207,11 @@ class SliceNet():
             dec_out = np.argmax(log, axis=2)
             output[:, idx+1] = dec_out[:,idx]
         for row in output:
-            eos = np.where(row==2)[0][0]
-            row[eos+1:] = 0
+            try:
+                eos = np.where(row==2)[0][0]
+                row[eos+1:] = 0
+            except:
+                pass
         return output
 
 #sn = SliceNet()
