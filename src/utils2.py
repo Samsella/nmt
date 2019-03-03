@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 class data():
     def __init__(self, path='../data/deu.txt', size=4000):
         self.paths = path
-        self.spm = self.sp(size, 'shared', create_path(path))
+        self.path = self.create_path(path)
+        self.spm = self.sp(size, 'shared', self.path)
         #self.spm_de_y = self.sp(size, 'de', path[0])   # in2 without eos
         #self.spm_de_l = self.sp(size, 'de', path[0])   # label without bos
         #self.spm_en = self.sp(size, 'en', path[1])
@@ -22,7 +23,7 @@ class data():
         #self.spm_fr = self.sp(size, 'fr', path[3])
         #self.spm_de_y.SetEncodeExtraOptions('bos')
         #self.spm_de_l.SetEncodeExtraOptions('eos')
-        self.spm.SetEncodeExtraOptions('eos', 'bos')
+        self.spm.SetEncodeExtraOptions('bos:eos')
 
     def create_path(self, path):
         if type(path) == list:
@@ -34,9 +35,9 @@ class data():
         return path
 
     def sp(self, size, lang, path):
-        name = 'spm_{size}_{type}_{data}_{lang}'.format(
+        name = 'sentencepiece/spm_{size}_{type}_{data}_{lang}'.format(
             size=size, type='unigram', data='europarl', lang=lang)
-        path2file = 'sentencepiece/' + name + '.model'
+        path2file = name + '.model'
         if not os.path.exists(path2file):
             spt.train('\
                 --input={input} \
@@ -60,19 +61,19 @@ class data():
         src, yy = [], []
         # remove sentences longer than maxLen
         for s1, s2 in zip(s,y):
-            if (max(len(s1), len(s2)+1) > maxLen):
+            if (max(len(s1), len(s2)) > maxLen):
                 continue
             src.append(s1)
             yy.append(s2)
         # create arrays
         arr_src = np.zeros((len(src), maxLen))
         arr_yy   = np.zeros((len(yy), maxLen))
-        arr_tgt = np.zeros((len(tgt), maxLen))
+        arr_tgt = np.zeros((len(yy), maxLen))
         # fill arrays
         for idx, (sent1, sent2) in enumerate(zip(src, yy)):
             arr_src[idx, :len(sent1)] = sent1
             arr_yy[idx, :len(sent2)-1]  = sent2[:-1]
-            arr_tgt[idx, :len(sent2)-1] = sent3[1:]
+            arr_tgt[idx, :len(sent2)-1] = sent2[1:]
         return arr_src, arr_yy, arr_tgt
 
     def decode(self, arr, lang):
